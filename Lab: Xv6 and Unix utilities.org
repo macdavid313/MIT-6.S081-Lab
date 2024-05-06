@@ -1,0 +1,88 @@
+#+title: Lab: Xv6 and Unix utilities
+#+author: Tianyu Gu
+#+email: gty@CLOS.org
+
++ https://pdos.csail.mit.edu/6.S081/2020/labs/util.html
+
+* sleep (easy)
+
+#+begin_quote
+Implement the UNIX program sleep for xv6; your sleep should pause for a
+user-specified number of ticks. A tick is a notion of time defined by the xv6
+kernel, namely the time between two interrupts from the timer chip. Your
+solution should be in the file user/sleep.c.
+#+end_quote
+
+** Solution
+
+#+begin_src c :tangle xv6-riscv/user/sleep.c
+#include "kernel/types.h"
+#include "user/user.h"
+
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
+    printf("No argument is given!\n");
+    exit(1);
+  }
+
+  if (argc > 2) {
+    printf("Too many arguments are given!\n");
+    exit(1);
+  }
+
+  char flag = 1;
+  const char *p = argv[1];
+  for (int i = 0; p[i] != 0; i++) {
+    if (p[i] < '0' || p[i] > '9') {
+      printf("Invalid argument!\n");
+      exit(1);
+    }
+  }
+
+  int ticks = atoi(p);
+  sleep(ticks);
+  exit(0);
+}
+#+end_src
+
+* pingpong (easy)
+
+#+begin_quote
+Write a program that uses UNIX system calls to ''ping-pong'' a byte between two
+processes over a pair of pipes, one for each direction. The parent should send a
+byte to the child; the child should print "<pid>: received ping", where <pid> is
+its process ID, write the byte on the pipe to the parent, and exit; the parent
+should read the byte from the child, print "<pid>: received pong", and exit.
+Your solution should be in the file user/pingpong.c.
+#+end_quote
+
+** Solution
+
+#+begin_src c :tangle xv6-riscv/user/pingpong.c
+#include "kernel/types.h"
+#include "user/user.h"
+
+int main(int argc, char *argv[]) {
+  int p[2];
+  pipe(p);
+
+  int pid = fork();
+  if (pid > 0) {
+    // parent
+    write(p[1], &pid, sizeof(int));
+    wait((int *)0);
+    printf("%d: received pong\n", getpid());
+
+  } else if (pid == 0) {
+    // child
+    read(p[0], &pid, sizeof(int));
+    printf("%d: received ping\n", pid);
+
+  } else {
+    printf("fork failed\n");
+    exit(1);
+  }
+
+  exit(0);
+}
+#+end_src
